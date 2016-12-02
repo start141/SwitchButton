@@ -23,6 +23,7 @@
         <attr name="kswTextOff" format="string"/>
         <attr name="kswTextMarginH" format="dimension"/>
         <attr name="kswAutoAdjustTextPosition" format="boolean"/>
+        <attr name="kswOnLayoutOffLayoutAlwaysShow" format="boolean"/>
     </declare-styleable>
 
 </resources>

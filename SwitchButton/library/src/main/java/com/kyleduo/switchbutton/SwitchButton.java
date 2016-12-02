@@ -1,7 +1,6 @@
 package com.kyleduo.switchbutton;
 
 import android.animation.ObjectAnimator;
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
@@ -13,7 +12,6 @@ import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.StateListDrawable;
-import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.v4.content.ContextCompat;
@@ -22,7 +20,6 @@ import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.SoundEffectConstants;
@@ -86,6 +83,7 @@ public class SwitchButton extends CompoundButton {
 	private float mTextHeight;
 	private float mTextMarginH;
 	private boolean mAutoAdjustTextPosition = true;
+	private boolean mOnLayoutOffLayoutAlwaysShow;
 
 	private CompoundButton.OnCheckedChangeListener mChildOnCheckedChangeListener;
 
@@ -152,6 +150,7 @@ public class SwitchButton extends CompoundButton {
 		String textOff = null;
 		float textMarginH = density * DEFAULT_TEXT_MARGIN_DP;
 		boolean autoAdjustTextPosition = true;
+		boolean onLayoutOffLayoutAlwaysShow = false;
 
 		TypedArray ta = attrs == null ? null : getContext().obtainStyledAttributes(attrs, R.styleable.SwitchButton);
 		if (ta != null) {
@@ -177,6 +176,7 @@ public class SwitchButton extends CompoundButton {
 			textMarginH = Math.max(textMarginH, backRadius / 2);
 			textMarginH = ta.getDimension(R.styleable.SwitchButton_kswTextMarginH, textMarginH);
 			autoAdjustTextPosition = ta.getBoolean(R.styleable.SwitchButton_kswAutoAdjustTextPosition, autoAdjustTextPosition);
+			onLayoutOffLayoutAlwaysShow = ta.getBoolean(R.styleable.SwitchButton_kswOnLayoutOffLayoutAlwaysShow, onLayoutOffLayoutAlwaysShow);
 			ta.recycle();
 		}
 
@@ -196,6 +196,7 @@ public class SwitchButton extends CompoundButton {
 		mTextOff = textOff;
 		mTextMarginH = textMarginH;
 		mAutoAdjustTextPosition = autoAdjustTextPosition;
+		onLayoutOffLayoutAlwaysShow = onLayoutOffLayoutAlwaysShow;
 
 		// thumb drawable and color
 		mThumbDrawable = thumbDrawable;
@@ -383,7 +384,7 @@ public class SwitchButton extends CompoundButton {
 		}
 
 		if (mOnLayout != null) {
-			float marginOnX = mBackRectF.left + (mBackRectF.width() - mThumbRectF.width() - mThumbMargin.right - mOnLayout.getWidth()) / 2 + (mThumbMargin.left < 0 ? mThumbMargin.left * -0.5f : 0);
+			float marginOnX = mBackRectF.left + (mBackRectF.width() - mThumbRectF.width() - mThumbMargin.right - mOnLayout.getWidth()) / 2 + (mThumbMargin.left < 0 ? mThumbMargin.left * -0.5f : 0) + mTextMarginH * (mThumbMargin.left >= 0 ? 1 : -1);
 			if (!mIsBackUseDrawable && mAutoAdjustTextPosition) {
 				marginOnX += mBackRadius / 4;
 			}
@@ -392,7 +393,7 @@ public class SwitchButton extends CompoundButton {
 		}
 
 		if (mOffLayout != null) {
-			float marginOffX = mBackRectF.right - (mBackRectF.width() - mThumbRectF.width() - mThumbMargin.left - mOffLayout.getWidth()) / 2 - mOffLayout.getWidth() + (mThumbMargin.right < 0 ? mThumbMargin.right * 0.5f : 0);
+			float marginOffX = mBackRectF.right - (mBackRectF.width() - mThumbRectF.width() - mThumbMargin.left - mOffLayout.getWidth()) / 2 - mOffLayout.getWidth() + (mThumbMargin.right < 0 ? mThumbMargin.right * 0.5f : 0) - mTextMarginH * (mThumbMargin.right >= 0 ? 1 : -1);
 			if (!mIsBackUseDrawable && mAutoAdjustTextPosition) {
 				marginOffX -= mBackRadius / 4;
 			}
@@ -444,21 +445,6 @@ public class SwitchButton extends CompoundButton {
 			}
 		}
 
-		// text
-		Layout switchText = getProcess() > 0.5 ? mOnLayout : mOffLayout;
-		RectF textRectF = getProcess() > 0.5 ? mTextOnRectF : mTextOffRectF;
-		if (switchText != null && textRectF != null) {
-			int alpha = (int) (255 * (getProcess() >= 0.75 ? getProcess() * 4 - 3 : (getProcess() < 0.25 ? 1 - getProcess() * 4 : 0)));
-			int textColor = getProcess() > 0.5 ? mOnTextColor : mOffTextColor;
-			int colorAlpha = Color.alpha(textColor);
-			colorAlpha = colorAlpha * alpha / 255;
-			switchText.getPaint().setARGB(colorAlpha, Color.red(textColor), Color.green(textColor), Color.blue(textColor));
-			canvas.save();
-			canvas.translate(textRectF.left, textRectF.top);
-			switchText.draw(canvas);
-			canvas.restore();
-		}
-
 		// thumb
 		mPresentThumbRectF.set(mThumbRectF);
 		mPresentThumbRectF.offset(mProcess * mSafeRectF.width(), 0);
@@ -468,6 +454,38 @@ public class SwitchButton extends CompoundButton {
 		} else {
 			mPaint.setColor(mCurrThumbColor);
 			canvas.drawRoundRect(mPresentThumbRectF, mThumbRadius, mThumbRadius, mPaint);
+		}
+
+		// text
+		if (!mOnLayoutOffLayoutAlwaysShow) {
+			Layout switchText = getProcess() > 0.5 ? mOnLayout : mOffLayout;
+			RectF textRectF = getProcess() > 0.5 ? mTextOnRectF : mTextOffRectF;
+			if (switchText != null && textRectF != null) {
+				int alpha = (int) (255 * (getProcess() >= 0.75 ? getProcess() * 4 - 3 : (getProcess() < 0.25 ? 1 - getProcess() * 4 : 0)));
+				int textColor = getProcess() > 0.5 ? mOnTextColor : mOffTextColor;
+				int colorAlpha = Color.alpha(textColor);
+				colorAlpha = colorAlpha * alpha / 255;
+				switchText.getPaint().setARGB(colorAlpha, Color.red(textColor), Color.green(textColor), Color.blue(textColor));
+				canvas.save();
+				canvas.translate(textRectF.left, textRectF.top);
+				switchText.draw(canvas);
+				canvas.restore();
+			}
+		} else {
+			if (mOnLayout != null && mTextOnRectF != null) {
+				mOnLayout.getPaint().setARGB(255, Color.red(mOnTextColor), Color.green(mOnTextColor), Color.blue(mOnTextColor));
+				canvas.save();
+				canvas.translate(mTextOnRectF.left, mTextOnRectF.top);
+				mOnLayout.draw(canvas);
+				canvas.restore();
+			}
+			if (mOffLayout != null && mTextOffRectF != null) {
+				canvas.save();
+				canvas.translate(mTextOffRectF.left, mTextOffRectF.top);
+				mOffLayout.getPaint().setARGB(255, Color.red(mOffTextColor), Color.green(mOffTextColor), Color.blue(mOffTextColor));
+				mOffLayout.draw(canvas);
+				canvas.restore();
+			}
 		}
 
 		if (mDrawDebugRect) {
