@@ -196,7 +196,7 @@ public class SwitchButton extends CompoundButton {
 		mTextOff = textOff;
 		mTextMarginH = textMarginH;
 		mAutoAdjustTextPosition = autoAdjustTextPosition;
-		onLayoutOffLayoutAlwaysShow = onLayoutOffLayoutAlwaysShow;
+		mOnLayoutOffLayoutAlwaysShow = onLayoutOffLayoutAlwaysShow;
 
 		// thumb drawable and color
 		mThumbDrawable = thumbDrawable;
